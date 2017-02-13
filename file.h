@@ -1,6 +1,7 @@
 #define LENSIZE 4
 #define BLOCKSIZE 4000
 #include "generator.h"
+#include "time.h"
 #include <algorithm>
 #include <stdio.h>
 #include<iostream>
@@ -41,6 +42,9 @@ class DB{
     FILE *outfp;
     map<string, hNode> hashlist;
     map<string,string> memlist;
+    
+    int flag = -1;
+    int total = 0;
     vector<int> blanknum;
     DB();
     void LiuHashWrite(string key,int offset,bool vaild);
@@ -50,7 +54,7 @@ class DB{
     string LiuLogRead(string *key,int offset);
     void LiuWrite(string key,string value);
     string LiuRead(string key);
-    string LiuDelete(string key);
+    void LiuDelete(string key);
     void PrintMap();
     vector<PAIR> SortMap();
     void Compact();

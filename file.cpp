@@ -120,17 +120,17 @@ string DB::LiuRead(string key)
   }
 }
 
-string DB::LiuDelete(string key)
+void DB::LiuDelete(string key)
 {
     hNode hnode = LiuHashRead(key);
-    if(hnode==NULL||!hnode->valid)
-        return notfound;
-    string prev = LiuLogRead(&key,hnode->offset);
-    blanknum[(hnode->offset)/BLOCKSIZE]+=(key.length()+LENSIZE+prev.length());
-    string value;
+    if(hnode!=NULL)
+    {
+      string prev = LiuLogRead(&key,hnode->offset);
+      blanknum[(hnode->offset)/BLOCKSIZE]+=(key.length()+LENSIZE+prev.length());
+    }
+    string value = "";
     int offset = LiuLogWrite(&key,&value);
     LiuHashWrite(key,offset,false);
-     
 }
 
 vector<PAIR> DB::SortMap()
@@ -184,10 +184,15 @@ void DB::LiuCompact()
       hNode hnode = LiuHashRead(cmap[i].first);
       if(hnode != NULL&&hnode->valid)
       {
-        if(blanknum[cmap[i].second->offset/BLOCKSIZE]<=(BLOCKSIZE/2))
+        if(blanknum[cmap[i].second->offset/BLOCKSIZE]<=(BLOCKSIZE/2))//空少copy
         {
           string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
           memlist[cmap[i].first] = value;
+          if(flag!=cmap[i].second->offset/BLOCKSIZE)
+          {
+              total += blanknum[cmap[i].second->offset/BLOCKSIZE];
+              flag = cmap[i].second->offset/BLOCKSIZE;
+          }
         }
         else
         {
@@ -214,21 +219,36 @@ void DB::LiuCompact()
 int main(void)
 {
   int i;
+  clock_t starts,ends;
   DB* db = new DB();
-  for(i=0;i<4000;i++)
+  for(i=0;i<10000;i++)
   {
    string key = to_string(i);  
    db->LiuWrite(key,key);
   }
- for(i=0;i<3999;i++)
+  for(i=0;i<4000;i+=2)
   {
     string key = to_string(i);
     db->LiuDelete(key);
   }
-  for(i=0;i<=db->blanknum.size();++i)
-    printf("%d\n",db->blanknum[i]);
+
+  for(i=0;i<4000;i+=3)
+  {
+    string key = to_string(i);
+    db->LiuDelete(key);
+  }
+  
+  for(i=4000;i<10000;i+=10)
+  {
+    string key = to_string(i);
+    db->LiuDelete(key);
+  }
+  starts = clock();
   db->LiuCompact();
-  string temp = db->LiuRead(to_string(3999)); 
-  //printf("%s\n",value.c_str());
+  ends = clock();
+  printf("time: %d %f\n",ends-starts,db->total);
+  string rkey = to_string(3997);
+  string temp = db->LiuRead(rkey); 
+  printf("%s\n",temp.c_str());
   return 0;
 }
