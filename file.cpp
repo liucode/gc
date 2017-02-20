@@ -1,4 +1,5 @@
 #include "file.h"
+#define VSIZE 512
 DB::DB()
 {
   fp = fopen("fscant","a+");
@@ -20,7 +21,11 @@ void DB::LiuHashWrite(string key,int offset,bool valid)
 
 hNode DB::LiuHashRead(string key)
 {
+   map<string, hNode> ::iterator it = hashlist.find(key);
+  if(it!=hashlist.end())
     return hashlist[key]; 
+  else
+    return NULL;
 }
 
 
@@ -156,14 +161,14 @@ void DB::Compact()
        hNode hnode = LiuHashRead(cmap[i].first);
        if(hnode != NULL&&hnode->valid)
        {
-       string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
-       lNode lnode = (lNode)malloc(sizeof(lognode));
-       lnode->key = &(cmap[i].first);
-       lnode->len = value.length();
-       lnode->value = &value;
-       int newoffset = ftell(outfp);
-       int reoffset = Flush(outfp,lnode,newoffset);
-       LiuHashWrite(cmap[i].first,reoffset,true);
+          string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
+          lNode lnode = (lNode)malloc(sizeof(lognode));
+          lnode->key = &(cmap[i].first);
+          lnode->len = value.length();
+          lnode->value = &value;
+          int newoffset = ftell(outfp);
+          int reoffset = Flush(outfp,lnode,newoffset);
+          LiuHashWrite(cmap[i].first,reoffset,true);
        }
        else
         {
@@ -187,7 +192,7 @@ void DB::LiuCompact()
         if(blanknum[cmap[i].second->offset/BLOCKSIZE]<=(BLOCKSIZE/2))//空少copy
         {
           string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
-          memlist[cmap[i].first] = value;
+          //memlist[cmap[i].first] = value;
           if(flag!=cmap[i].second->offset/BLOCKSIZE)
           {
               total += blanknum[cmap[i].second->offset/BLOCKSIZE];
@@ -216,39 +221,42 @@ void DB::LiuCompact()
     fclose(fp);
     fp = outfp;
 }
-int main(void)
+
+
+void test(FILE *dfp)
 {
   int i;
   clock_t starts,ends;
   DB* db = new DB();
-  for(i=0;i<10000;i++)
+  for(i=0;i<=2000000;i++)
   {
+   char v[VSIZE];
+   for(int j=0;j<VSIZE;j++)
+      v[j] = '0';
+   string value = v; 
    string key = to_string(i);  
-   db->LiuWrite(key,key);
+   db->LiuWrite(key,value);
   }
-  for(i=0;i<4000;i+=2)
-  {
-    string key = to_string(i);
-    db->LiuDelete(key);
-  }
+  fflush(db->fp);
 
-  for(i=0;i<4000;i+=3)
+  while(!feof(dfp))
   {
-    string key = to_string(i);
-    db->LiuDelete(key);
-  }
-  
-  for(i=4000;i<10000;i+=10)
-  {
-    string key = to_string(i);
-    db->LiuDelete(key);
+    char key[7];
+    fscanf(dfp,"%s",key);
+    string s = key;
+    db->LiuDelete(s);
   }
   starts = clock();
   db->LiuCompact();
+  fflush(db->fp);
   ends = clock();
   printf("time: %d %f\n",ends-starts,db->total);
-  string rkey = to_string(3997);
-  string temp = db->LiuRead(rkey); 
-  printf("%s\n",temp.c_str());
+}
+int main(int argc,char** argv)
+{
+  FILE *dfp = fopen("mix","r");
+  test(dfp);
+  fclose(dfp);
   return 0;
 }
+
