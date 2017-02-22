@@ -185,18 +185,69 @@ void DB::Compact()
     printf("%d",ends-starts);
     fp = outfp;
 }
-void DB::LiuCompact()
+void DB::LiuCompact(int rate)
 {
+    int i;
     outfp = fopen("comp","a+");
     vector<PAIR> cmap = SortMap();
+    vector<int> flags;
+    for(i=1;i!=blanknum.size()+1;)
+    {
+        int num = 0;
+        int bi = i;
+        while(blanknum[bi]<=BLOCKSIZE*MEMRATE)
+        {
+            if(blanknum[bi]>BLOCKSIZE*MEMRATE)
+            {
+              bi++;
+              num++;
+            }
+            else
+            {
+              break;
+            }
+        }
+        if(num==0)
+        {
+          if(blanknum[i]<=BLOCKSIZE*MEMRATE)
+              flags.push_back(1);//mem
+          else
+          {
+              flags.push_back(0);
+          }
+          i++;
+        }
+        else
+        {
+            if(blanknum[i]/num<rate)
+            {
+                flags.push_back(0);
+                i++;
+                while(num--!=0)
+                {
+                  flags.push_back(1);
+                  i++;
+                }
+            }
+            else
+            {
+                while(num--!=0)
+                {
+                  flags.push_back(1);
+                  i++;
+                }
+            }
+        }
+    }
     clock_t starts,ends;
     starts = clock();
-    for (int i = 0; i != cmap.size(); ++i) 
+    for (i = 0; i != cmap.size();++i) 
     {
       //hNode hnode = LiuHashRead(cmap[i].first);
       //if(hnode != NULL&&hnode->valid)
       //{
-        if(blanknum[cmap[i].second->offset/BLOCKSIZE]<=(BLOCKSIZE/2))//空少copy
+        int bi = cmap[++i].second->offset/BLOCKSIZE;
+        if(flags[i]==1)//空少copy
         {
           string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
           //memlist[cmap[i].first] = value;
@@ -233,7 +284,7 @@ void DB::LiuCompact()
 }
 
 
-void test(FILE *dfp)
+void test(FILE *dfp,int policy,int rate)
 {
   int i;
   clock_t starts,ends;
@@ -257,7 +308,10 @@ void test(FILE *dfp)
     db->LiuDelete(s);
   }
   starts = clock();
-  db->LiuCompact();
+  if(policy == 1)
+    db->LiuCompact(rate);
+  else
+    db->Compact();
   fflush(db->fp);
   ends = clock();
   printf("time: %d %f\n",ends-starts,db->total);
@@ -265,7 +319,7 @@ void test(FILE *dfp)
 int main(int argc,char** argv)
 {
   FILE *dfp = fopen("small","r");
-  test(dfp);
+  test(dfp,1,300);
   fclose(dfp);
   return 0;
 }

@@ -1,5 +1,6 @@
 #define LENSIZE 4
 #define BLOCKSIZE 4000
+#define MEMRATE 0.8
 #include "generator.h"
 #include "time.h"
 #include <algorithm>
@@ -58,7 +59,7 @@ class DB{
     void PrintMap();
     vector<PAIR> SortMap();
     void Compact();
-    void LiuCompact();
+    void LiuCompact(int rate);
 };
 
 
