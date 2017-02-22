@@ -157,10 +157,12 @@ void DB::Compact()
 {
     vector<PAIR> cmap = SortMap();
     outfp = fopen("comp","a+");
+    clock_t starts,ends;
+    starts = clock();
     for (int i = 0; i != cmap.size(); ++i) {
-       hNode hnode = LiuHashRead(cmap[i].first);
-       if(hnode != NULL&&hnode->valid)
-       {
+      // hNode hnode = LiuHashRead(cmap[i].first);
+       //if(hnode != NULL&&hnode->valid)
+       //{
           string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
           lNode lnode = (lNode)malloc(sizeof(lognode));
           lnode->key = &(cmap[i].first);
@@ -169,26 +171,31 @@ void DB::Compact()
           int newoffset = ftell(outfp);
           int reoffset = Flush(outfp,lnode,newoffset);
           LiuHashWrite(cmap[i].first,reoffset,true);
-       }
+       /*}
        else
         {
            map<string, hNode> ::iterator it = hashlist.find(cmap[i].first);
            if(it!=hashlist.end())
               hashlist.erase(it);
-        }
+        }*/
     }
-    fclose(fp);
+    ends = clock();
+    fflush(outfp);
+    fclose(outfp);
+    printf("%d",ends-starts);
     fp = outfp;
 }
 void DB::LiuCompact()
 {
     outfp = fopen("comp","a+");
     vector<PAIR> cmap = SortMap();
+    clock_t starts,ends;
+    starts = clock();
     for (int i = 0; i != cmap.size(); ++i) 
     {
-      hNode hnode = LiuHashRead(cmap[i].first);
-      if(hnode != NULL&&hnode->valid)
-      {
+      //hNode hnode = LiuHashRead(cmap[i].first);
+      //if(hnode != NULL&&hnode->valid)
+      //{
         if(blanknum[cmap[i].second->offset/BLOCKSIZE]<=(BLOCKSIZE/2))//空少copy
         {
           string value = LiuLogRead(&(cmap[i].first),cmap[i].second->offset);
@@ -210,15 +217,18 @@ void DB::LiuCompact()
           int reoffset = Flush(outfp,lnode,newoffset);
           LiuHashWrite(cmap[i].first,reoffset,true);
        }//if bl
-      }//if hnode
-      else
+      //}//if hnode
+ /*     else
       {
            map<string, hNode> ::iterator it = hashlist.find(cmap[i].first);
            if(it!=hashlist.end())
               hashlist.erase(it);
-      }//if hnode
+      }//if hnode*/
     }//for
-    fclose(fp);
+    fflush(outfp);
+    fclose(outfp);
+    ends = clock();
+    printf("%d",ends-starts);
     fp = outfp;
 }
 
@@ -254,7 +264,7 @@ void test(FILE *dfp)
 }
 int main(int argc,char** argv)
 {
-  FILE *dfp = fopen("mix","r");
+  FILE *dfp = fopen("small","r");
   test(dfp);
   fclose(dfp);
   return 0;

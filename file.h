@@ -9,8 +9,6 @@
 #include <malloc.h>
 #include <map>
 #include <vector>
-#include <ext/hash_map>
-using namespace __gnu_cxx;
 using namespace std;
 typedef struct lognode
 {
